@@ -40,6 +40,7 @@ def generate_robot_description(
     use_fake_hardware,
     right_can_interface,
     left_can_interface,
+    can_fd,
     arm_prefix,
 ):
     """Render Xacro and return XML string."""
@@ -49,6 +50,7 @@ def generate_robot_description(
     use_fake_hardware_str = context.perform_substitution(use_fake_hardware)
     right_can_interface_str = context.perform_substitution(right_can_interface)
     left_can_interface_str = context.perform_substitution(left_can_interface)
+    can_fd_str = context.perform_substitution(can_fd)
     arm_prefix_str = context.perform_substitution(arm_prefix)
 
     xacro_path = os.path.join(
@@ -67,6 +69,7 @@ def generate_robot_description(
             "ros2_control": "true",
             "left_can_interface": left_can_interface_str,
             "right_can_interface": right_can_interface_str,
+            "can_fd": can_fd_str,
             # arm_prefix unused inside xacro but kept for completeness
         },
     ).toprettyxml(indent="  ")
@@ -83,6 +86,7 @@ def robot_nodes_spawner(
     controllers_file,
     right_can_interface,
     left_can_interface,
+    can_fd,
     arm_prefix,
 ):
     robot_description = generate_robot_description(
@@ -93,6 +97,7 @@ def robot_nodes_spawner(
         use_fake_hardware,
         right_can_interface,
         left_can_interface,
+        can_fd,
         arm_prefix,
     )
 
@@ -163,6 +168,11 @@ def generate_launch_description():
         DeclareLaunchArgument("right_can_interface", default_value="can0"),
         DeclareLaunchArgument("left_can_interface", default_value="can1"),
         DeclareLaunchArgument(
+            "can_fd",
+            default_value="false",
+            description="Use CAN FD frames (true) or standard CAN 2.0 frames (false).",
+        ),
+        DeclareLaunchArgument(
             "controllers_file",
             default_value="openarm_v10_bimanual_controllers.yaml",
         ),
@@ -177,6 +187,7 @@ def generate_launch_description():
     controllers_file = LaunchConfiguration("controllers_file")
     right_can_interface = LaunchConfiguration("right_can_interface")
     left_can_interface = LaunchConfiguration("left_can_interface")
+    can_fd = LaunchConfiguration("can_fd")
     arm_prefix = LaunchConfiguration("arm_prefix")
 
     controllers_file = PathJoinSubstitution(
@@ -194,6 +205,7 @@ def generate_launch_description():
             controllers_file,
             right_can_interface,
             left_can_interface,
+            can_fd,
             arm_prefix,
         ],
     )
