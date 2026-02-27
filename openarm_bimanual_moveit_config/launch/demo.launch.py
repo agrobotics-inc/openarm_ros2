@@ -40,7 +40,6 @@ def generate_robot_description(
     use_fake_hardware,
     right_can_interface,
     left_can_interface,
-    can_fd,
     arm_prefix,
 ):
     """Render Xacro and return XML string."""
@@ -50,7 +49,6 @@ def generate_robot_description(
     use_fake_hardware_str = context.perform_substitution(use_fake_hardware)
     right_can_interface_str = context.perform_substitution(right_can_interface)
     left_can_interface_str = context.perform_substitution(left_can_interface)
-    can_fd_str = context.perform_substitution(can_fd)
     arm_prefix_str = context.perform_substitution(arm_prefix)
 
     xacro_path = os.path.join(
@@ -65,11 +63,12 @@ def generate_robot_description(
         mappings={
             "arm_type": arm_type_str,
             "bimanual": "true",
+            "hand": "false",
+            "ee_type": "none",
             "use_fake_hardware": use_fake_hardware_str,
             "ros2_control": "true",
             "left_can_interface": left_can_interface_str,
             "right_can_interface": right_can_interface_str,
-            "can_fd": can_fd_str,
             # arm_prefix unused inside xacro but kept for completeness
         },
     ).toprettyxml(indent="  ")
@@ -86,7 +85,6 @@ def robot_nodes_spawner(
     controllers_file,
     right_can_interface,
     left_can_interface,
-    can_fd,
     arm_prefix,
 ):
     robot_description = generate_robot_description(
@@ -97,7 +95,6 @@ def robot_nodes_spawner(
         use_fake_hardware,
         right_can_interface,
         left_can_interface,
-        can_fd,
         arm_prefix,
     )
 
@@ -168,11 +165,6 @@ def generate_launch_description():
         DeclareLaunchArgument("right_can_interface", default_value="can0"),
         DeclareLaunchArgument("left_can_interface", default_value="can1"),
         DeclareLaunchArgument(
-            "can_fd",
-            default_value="false",
-            description="Use CAN FD frames (true) or standard CAN 2.0 frames (false).",
-        ),
-        DeclareLaunchArgument(
             "controllers_file",
             default_value="openarm_v10_bimanual_controllers.yaml",
         ),
@@ -187,7 +179,6 @@ def generate_launch_description():
     controllers_file = LaunchConfiguration("controllers_file")
     right_can_interface = LaunchConfiguration("right_can_interface")
     left_can_interface = LaunchConfiguration("left_can_interface")
-    can_fd = LaunchConfiguration("can_fd")
     arm_prefix = LaunchConfiguration("arm_prefix")
 
     controllers_file = PathJoinSubstitution(
@@ -205,7 +196,6 @@ def generate_launch_description():
             controllers_file,
             right_can_interface,
             left_can_interface,
-            can_fd,
             arm_prefix,
         ],
     )
@@ -220,21 +210,29 @@ def generate_launch_description():
     controller_spawner_func = OpaqueFunction(
         function=controller_spawner, args=[robot_controller])
 
-    gripper_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["left_gripper_controller",
-                   "right_gripper_controller", "-c", "/controller_manager"],
-    )
-
     delayed_jsb = TimerAction(period=2.0, actions=[jsb_spawner])
     delayed_arm_ctrl = TimerAction(
         period=1.0, actions=[controller_spawner_func])
-    delayed_gripper = TimerAction(period=1.0, actions=[gripper_spawner])
 
-    moveit_config = MoveItConfigsBuilder(
-        "openarm", package_name="openarm_bimanual_moveit_config"
-    ).to_moveit_configs()
+    _moveit_urdf = os.path.join(
+        get_package_share_directory("openarm_description"),
+        "urdf", "robot", "v10.urdf.xacro",
+    )
+    moveit_config = (
+        MoveItConfigsBuilder("openarm", package_name="openarm_bimanual_moveit_config")
+        .robot_description(
+            file_path=_moveit_urdf,
+            mappings={
+                "arm_type": "v10",
+                "bimanual": "true",
+                "hand": "false",
+                "ee_type": "none",
+                "ros2_control": "false",
+                "use_fake_hardware": "false",
+            },
+        )
+        .to_moveit_configs()
+    )
 
     moveit_params = moveit_config.to_dict()
 
@@ -265,7 +263,6 @@ def generate_launch_description():
             robot_nodes_spawner_func,
             delayed_jsb,
             delayed_arm_ctrl,
-            delayed_gripper,
             run_move_group_node,
             rviz_node,
         ]
