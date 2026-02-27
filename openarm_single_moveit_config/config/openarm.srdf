@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Semantic Robot Description Format (SRDF) for single OpenArm v10 without gripper.
+  Planning group: "arm" — 7-DOF chain from openarm_link0 to openarm_link7.
+-->
+<robot name="openarm">
+
+  <!-- Planning group: 7-DOF arm only, no gripper.
+       world→openarm_body_link0→openarm_link0 is a real fixed joint in the
+       URDF (added by with_body:=true), so no virtual_joint is needed. -->
+  <group name="arm">
+    <chain base_link="openarm_link0" tip_link="openarm_link7"/>
+  </group>
+
+  <!-- Body link never collides with arm base -->
+  <disable_collisions link1="openarm_body_link0" link2="openarm_link0" reason="Adjacent"/>
+  <disable_collisions link1="openarm_body_link0" link2="openarm_link1" reason="Never"/>
+  <disable_collisions link1="openarm_body_link0" link2="openarm_link2" reason="Never"/>
+  <disable_collisions link1="openarm_body_link0" link2="openarm_link3" reason="Never"/>
+
+  <!-- Named poses -->
+
+  <!-- home: calibrated zero position.
+       All joints at 0 = the position written by the zero-position calibration
+       script.  The hardware also returns here automatically on activation
+       (return_to_zero).  J4=0 is the lower mechanical stop (0 of 0..140 deg). -->
+  <group_state name="home" group="arm">
+    <joint name="openarm_joint1" value="0"/>
+    <joint name="openarm_joint2" value="0"/>
+    <joint name="openarm_joint3" value="0"/>
+    <joint name="openarm_joint4" value="0"/>
+    <joint name="openarm_joint5" value="0"/>
+    <joint name="openarm_joint6" value="0"/>
+    <joint name="openarm_joint7" value="0"/>
+  </group_state>
+
+  <!-- Disable collision checking between adjacent links (always in contact) -->
+  <disable_collisions link1="openarm_link0" link2="openarm_link1" reason="Adjacent"/>
+  <disable_collisions link1="openarm_link1" link2="openarm_link2" reason="Adjacent"/>
+  <disable_collisions link1="openarm_link2" link2="openarm_link3" reason="Adjacent"/>
+  <disable_collisions link1="openarm_link3" link2="openarm_link4" reason="Adjacent"/>
+  <disable_collisions link1="openarm_link4" link2="openarm_link5" reason="Adjacent"/>
+  <disable_collisions link1="openarm_link5" link2="openarm_link6" reason="Adjacent"/>
+  <disable_collisions link1="openarm_link6" link2="openarm_link7" reason="Adjacent"/>
+
+  <!-- Disable collision checking between non-adjacent links that can never collide -->
+  <disable_collisions link1="openarm_link0" link2="openarm_link2" reason="Never"/>
+  <disable_collisions link1="openarm_link0" link2="openarm_link3" reason="Never"/>
+  <disable_collisions link1="openarm_link0" link2="openarm_link4" reason="Never"/>
+  <disable_collisions link1="openarm_link1" link2="openarm_link3" reason="Never"/>
+  <disable_collisions link1="openarm_link1" link2="openarm_link4" reason="Never"/>
+  <disable_collisions link1="openarm_link1" link2="openarm_link5" reason="Never"/>
+  <disable_collisions link1="openarm_link1" link2="openarm_link6" reason="Never"/>
+  <disable_collisions link1="openarm_link2" link2="openarm_link4" reason="Never"/>
+  <disable_collisions link1="openarm_link2" link2="openarm_link5" reason="Never"/>
+  <disable_collisions link1="openarm_link2" link2="openarm_link6" reason="Never"/>
+  <disable_collisions link1="openarm_link2" link2="openarm_link7" reason="Never"/>
+  <disable_collisions link1="openarm_link3" link2="openarm_link5" reason="Never"/>
+  <disable_collisions link1="openarm_link3" link2="openarm_link6" reason="Never"/>
+  <disable_collisions link1="openarm_link3" link2="openarm_link7" reason="Never"/>
+  <disable_collisions link1="openarm_link4" link2="openarm_link6" reason="Never"/>
+  <disable_collisions link1="openarm_link4" link2="openarm_link7" reason="Never"/>
+  <disable_collisions link1="openarm_link5" link2="openarm_link7" reason="Never"/>
+
+</robot>

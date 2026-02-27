@@ -1,0 +1,75 @@
+# MoveIt joint limits for OpenArm v10 single-arm (no gripper).
+#
+# Position limits are set to match the calibrated hardware mechanical stops.
+# These reinforce what is already in the URDF and help MoveIt plan safely.
+#
+# Hardware calibration notes (right_arm, zero written 2025):
+#   J1: lower stop at -80 deg, upper at +200 deg  -> [-1.396263, 3.490659] rad
+#   J2: symmetric +-100 deg                        -> [-1.745329, 1.745329] rad
+#   J3: symmetric +-90 deg                         -> [-1.570796, 1.570796] rad
+#   J4: lower stop = calibrated zero (0 deg),
+#       upper stop at 140 deg                      -> [0.0,       2.443461] rad
+#   J5: symmetric +-90 deg                         -> [-1.570796, 1.570796] rad
+#   J6: symmetric +-45 deg                         -> [-0.785398, 0.785398] rad
+#   J7: symmetric +-90 deg                         -> [-1.570796, 1.570796] rad
+
+default_velocity_scaling_factor: 0.1
+default_acceleration_scaling_factor: 0.1
+
+joint_limits:
+  openarm_joint1:
+    has_velocity_limits: true
+    max_velocity: 16.754666
+    has_acceleration_limits: false
+    max_acceleration: 0.0
+    has_position_limits: true
+    min_position: -1.396263
+    max_position: 3.490659
+  openarm_joint2:
+    has_velocity_limits: true
+    max_velocity: 16.754666
+    has_acceleration_limits: false
+    max_acceleration: 0.0
+    has_position_limits: true
+    min_position: -1.745329
+    max_position: 1.745329
+  openarm_joint3:
+    has_velocity_limits: true
+    max_velocity: 5.445426
+    has_acceleration_limits: false
+    max_acceleration: 0.0
+    has_position_limits: true
+    min_position: -1.570796
+    max_position: 1.570796
+  openarm_joint4:
+    has_velocity_limits: true
+    max_velocity: 5.445426
+    has_acceleration_limits: false
+    max_acceleration: 0.0
+    has_position_limits: true
+    min_position: 0.0
+    max_position: 2.443461
+  openarm_joint5:
+    has_velocity_limits: true
+    max_velocity: 20.943946
+    has_acceleration_limits: false
+    max_acceleration: 0.0
+    has_position_limits: true
+    min_position: -1.570796
+    max_position: 1.570796
+  openarm_joint6:
+    has_velocity_limits: true
+    max_velocity: 20.943946
+    has_acceleration_limits: false
+    max_acceleration: 0.0
+    has_position_limits: true
+    min_position: -0.785398
+    max_position: 0.785398
+  openarm_joint7:
+    has_velocity_limits: true
+    max_velocity: 20.943946
+    has_acceleration_limits: false
+    max_acceleration: 0.0
+    has_position_limits: true
+    min_position: -1.570796
+    max_position: 1.570796
