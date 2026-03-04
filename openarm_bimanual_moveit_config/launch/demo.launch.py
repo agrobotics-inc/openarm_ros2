@@ -162,8 +162,8 @@ def generate_launch_description():
             "runtime_config_package", default_value="openarm_bringup"
         ),
         DeclareLaunchArgument("arm_prefix", default_value=""),
-        DeclareLaunchArgument("right_can_interface", default_value="can0"),
-        DeclareLaunchArgument("left_can_interface", default_value="can1"),
+        DeclareLaunchArgument("right_can_interface", default_value="can1"),
+        DeclareLaunchArgument("left_can_interface", default_value="can0"),
         DeclareLaunchArgument(
             "controllers_file",
             default_value="openarm_v10_bimanual_controllers.yaml",
