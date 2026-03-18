@@ -78,6 +78,7 @@ class OpenArm_v10HW : public hardware_interface::SystemInterface {
   // V10 default configuration
   static constexpr size_t ARM_DOF = 7;
   static constexpr bool ENABLE_GRIPPER = true;
+  
 
   // Default motor configuration for V10
   const std::vector<openarm::damiao_motor::MotorType> DEFAULT_MOTOR_TYPES = {
@@ -130,6 +131,8 @@ class OpenArm_v10HW : public hardware_interface::SystemInterface {
   std::vector<double> pos_states_;
   std::vector<double> vel_states_;
   std::vector<double> tau_states_;
+  std::vector<double> last_pos_commands_;
+  bool command_received_ = false;
 
   // Helper methods
   void return_to_zero();

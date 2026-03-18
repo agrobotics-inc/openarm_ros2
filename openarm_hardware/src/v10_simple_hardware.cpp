@@ -156,6 +156,23 @@ hardware_interface::CallbackReturn OpenArm_v10HW::on_init(
   pos_states_.resize(total_joints, 0.0);
   vel_states_.resize(total_joints, 0.0);
   tau_states_.resize(total_joints, 0.0);
+  last_pos_commands_ = pos_commands_;
+
+// //   // Set initial positions based on arm_prefix
+// if (arm_prefix_ == "left_") {
+//     std::vector<double> left_init = {0, 0, 0, 1.7, 0, 0, 0.0};
+//     for (size_t i = 0; i < ARM_DOF && i < left_init.size(); ++i) {
+//         pos_commands_[i] = left_init[i];
+//     }
+// } else if (arm_prefix_ == "right_") {
+//     std::vector<double> right_init = {0, 0, 0, 1.7, 0, 0, 0.0};
+//     for (size_t i = 0; i < ARM_DOF && i < right_init.size(); ++i) {
+//         pos_commands_[i] = right_init[i];
+//     }
+// } else {
+//     // default single-arm or unknown prefix
+//     std::fill(pos_commands_.begin(), pos_commands_.begin() + ARM_DOF, 0.0);
+// }
 
   RCLCPP_INFO(rclcpp::get_logger("OpenArm_v10HW"),
               "OpenArm V10 Simple HW initialized successfully");
@@ -215,7 +232,7 @@ hardware_interface::CallbackReturn OpenArm_v10HW::on_activate(
   openarm_->recv_all();
 
   // Return to zero position
-  return_to_zero();
+  // return_to_zero();
 
   RCLCPP_INFO(rclcpp::get_logger("OpenArm_v10HW"), "OpenArm V10 activated");
   return CallbackReturn::SUCCESS;
@@ -270,6 +287,23 @@ hardware_interface::return_type OpenArm_v10HW::read(
 hardware_interface::return_type OpenArm_v10HW::write(
     const rclcpp::Time& /*time*/, const rclcpp::Duration& /*period*/) {
   // Control arm motors with MIT control
+  // Detect if command changed
+  command_received_ = false;
+  for (size_t i = 0; i < pos_commands_.size(); ++i) {
+    if (std::abs(pos_commands_[i] - last_pos_commands_[i]) > 1e-6) {
+      command_received_ = true;
+      break;
+    }
+  }
+
+  // If no external command -> do nothing
+  if (!command_received_) {
+    return hardware_interface::return_type::OK;
+  }
+
+  // Save last command
+  last_pos_commands_ = pos_commands_;
+
   std::vector<openarm::damiao_motor::MITParam> arm_params;
   for (size_t i = 0; i < ARM_DOF; ++i) {
     arm_params.push_back(
