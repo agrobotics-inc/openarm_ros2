@@ -284,9 +284,8 @@ hardware_interface::return_type OpenArm_v10HW_GC::write(
     for (size_t i = 0; i < ARM_DOF; ++i) q(i) = pos_states_[i];
     kdl_dyn_param_->JntToGravity(q, grav_torques);
 
-    static int log_cnt = 0;
-    if (++log_cnt >= 100) {
-      log_cnt = 0;
+    if (++log_cnt_ >= 100) {
+      log_cnt_ = 0;
       RCLCPP_INFO(rclcpp::get_logger("OpenArm_v10HW_GC"),
         "[%s] grav(Nm) J1=%.2f J2=%.2f J3=%.2f J4=%.2f J5=%.2f J6=%.2f J7=%.2f  scale=%.2f",
         arm_prefix_.c_str(),

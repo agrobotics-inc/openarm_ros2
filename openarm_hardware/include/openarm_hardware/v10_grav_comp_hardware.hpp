@@ -136,6 +136,7 @@ class OpenArm_v10HW_GC : public hardware_interface::SystemInterface {
   std::unique_ptr<KDL::ChainDynParam> kdl_dyn_param_;
   double gravity_comp_scale_ = 0.0;
   bool   gravity_comp_ready_ = false;
+  int    log_cnt_ = 0;  // per-instance, not static — avoids shared counter bug
 
   bool parse_config(const hardware_interface::HardwareInfo & info);
   void generate_joint_names();
