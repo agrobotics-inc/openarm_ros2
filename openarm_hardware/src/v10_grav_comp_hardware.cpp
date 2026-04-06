@@ -139,8 +139,14 @@ bool OpenArm_v10HW_GC::init_gravity_comp(const hardware_interface::HardwareInfo 
     return true;
   }
 
-  kdl_dyn_param_ = std::make_unique<KDL::ChainDynParam>(
-      kdl_chain_, KDL::Vector(0.0, 0.0, -9.81));
+  // Gravity in link0's local frame (NOT world frame).
+  // The arm is tilted 90° on mount: link0's Y-axis = world UP.
+  //   right arm (rpy= π/2, 0, π): gravity = (0, -9.81, 0)
+  //   left  arm (rpy=-π/2, 0, π): gravity = (0, +9.81, 0)
+  const KDL::Vector gravity = (arm_prefix_ == "left_")
+      ? KDL::Vector(0.0, 9.81, 0.0)
+      : KDL::Vector(0.0, -9.81, 0.0);
+  kdl_dyn_param_ = std::make_unique<KDL::ChainDynParam>(kdl_chain_, gravity);
 
   gravity_comp_ready_ = true;
 
