@@ -104,21 +104,27 @@ bool OpenArm_v10HW_GC::init_gravity_comp(const hardware_interface::HardwareInfo 
 
   const std::string base_link = "openarm_" + arm_prefix_ + "link0";
   const std::string tip_link  = arm_prefix_ + "eef_base_link";
+  std::string actual_tip = tip_link;
 
   if (!kdl_tree.getChain(base_link, tip_link, kdl_chain_)) {
     RCLCPP_WARN(rclcpp::get_logger("OpenArm_v10HW_GC"),
-      "Chain [%s -> %s] not found, trying link7", base_link.c_str(), tip_link.c_str());
-    const std::string fallback = "openarm_" + arm_prefix_ + "link7";
-    if (!kdl_tree.getChain(base_link, fallback, kdl_chain_)) {
+      "[%s] Chain to [%s] NOT FOUND — H8 mass excluded, falling back to link7",
+      arm_prefix_.c_str(), tip_link.c_str());
+    actual_tip = "openarm_" + arm_prefix_ + "link7";
+    if (!kdl_tree.getChain(base_link, actual_tip, kdl_chain_)) {
       RCLCPP_ERROR(rclcpp::get_logger("OpenArm_v10HW_GC"),
-        "Chain [%s -> %s] also failed — KDL disabled", base_link.c_str(), fallback.c_str());
+        "[%s] Chain to link7 also failed — KDL disabled", arm_prefix_.c_str());
       return true;
     }
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger("OpenArm_v10HW_GC"),
+      "[%s] Chain to eef_base_link FOUND — H8 mass IS included", arm_prefix_.c_str());
   }
 
   if (kdl_chain_.getNrOfJoints() != ARM_DOF) {
     RCLCPP_ERROR(rclcpp::get_logger("OpenArm_v10HW_GC"),
-      "Chain has %u joints, expected %zu — KDL disabled", kdl_chain_.getNrOfJoints(), ARM_DOF);
+      "[%s] Chain has %u joints, expected %zu — KDL disabled",
+      arm_prefix_.c_str(), kdl_chain_.getNrOfJoints(), ARM_DOF);
     return true;
   }
 
@@ -133,8 +139,9 @@ bool OpenArm_v10HW_GC::init_gravity_comp(const hardware_interface::HardwareInfo 
   gravity_comp_ready_ = true;
 
   RCLCPP_INFO(rclcpp::get_logger("OpenArm_v10HW_GC"),
-    "[%s] KDL ready: chain [%s -> %s]  scale=%.2f  gravity=(0, %.2f, 0)",
-    arm_prefix_.c_str(), base_link.c_str(), tip_link.c_str(),
+    "[%s] KDL ready: [%s -> %s]  segments=%u  joints=%u  scale=%.2f  gravity=(0,%.2f,0)",
+    arm_prefix_.c_str(), base_link.c_str(), actual_tip.c_str(),
+    kdl_chain_.getNrOfSegments(), kdl_chain_.getNrOfJoints(),
     gravity_comp_scale_, gravity.y());
 
   return true;
@@ -271,7 +278,10 @@ hardware_interface::return_type OpenArm_v10HW_GC::write(
     }
   }
 
-  if (!command_received_ && !gravity_comp_ready_) {
+  // Only send when a new position command has arrived.
+  // Gravity comp adds to tau but must not force sending when there's no command
+  // — pos_commands_ would be all zeros at startup causing the arm to snap to zero.
+  if (!command_received_) {
     return hardware_interface::return_type::OK;
   }
 
