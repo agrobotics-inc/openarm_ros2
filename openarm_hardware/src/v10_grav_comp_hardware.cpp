@@ -89,71 +89,53 @@ void OpenArm_v10HW_GC::generate_joint_names()
 
 bool OpenArm_v10HW_GC::init_gravity_comp(const hardware_interface::HardwareInfo & info)
 {
-  if (gravity_comp_scale_ <= 0.0) {
-    RCLCPP_INFO(rclcpp::get_logger("OpenArm_v10HW_GC"),
-                "gravity_comp_scale=0 — gravity compensation disabled");
-    return true;
-  }
-
+  // Always initialise KDL regardless of scale so torques can be logged/observed.
+  // scale=0 means torques are computed but not applied.
   if (info.original_xml.empty()) {
-    RCLCPP_WARN(rclcpp::get_logger("OpenArm_v10HW_GC"),
-                "original_xml is empty — gravity compensation disabled");
+    RCLCPP_WARN(rclcpp::get_logger("OpenArm_v10HW_GC"), "original_xml empty — KDL disabled");
     return true;
   }
 
   KDL::Tree kdl_tree;
   if (!kdl_parser::treeFromString(info.original_xml, kdl_tree)) {
-    RCLCPP_WARN(rclcpp::get_logger("OpenArm_v10HW_GC"),
-                "Failed to parse URDF into KDL tree — gravity compensation disabled");
+    RCLCPP_WARN(rclcpp::get_logger("OpenArm_v10HW_GC"), "URDF parse failed — KDL disabled");
     return true;
   }
 
-  // Chain: arm base link -> H8 eef base link (fixed joint carries H8 mass automatically)
-  // arm_prefix_ is "left_" or "right_" or ""
   const std::string base_link = "openarm_" + arm_prefix_ + "link0";
   const std::string tip_link  = arm_prefix_ + "eef_base_link";
 
   if (!kdl_tree.getChain(base_link, tip_link, kdl_chain_)) {
-    RCLCPP_WARN(
-      rclcpp::get_logger("OpenArm_v10HW_GC"),
-      "KDL chain [%s -> %s] not found — falling back to arm-only chain",
-      base_link.c_str(), tip_link.c_str());
-
-    const std::string fallback_tip = "openarm_" + arm_prefix_ + "link7";
-    if (!kdl_tree.getChain(base_link, fallback_tip, kdl_chain_)) {
-      RCLCPP_ERROR(
-        rclcpp::get_logger("OpenArm_v10HW_GC"),
-        "KDL chain [%s -> %s] also failed — gravity compensation disabled",
-        base_link.c_str(), fallback_tip.c_str());
+    RCLCPP_WARN(rclcpp::get_logger("OpenArm_v10HW_GC"),
+      "Chain [%s -> %s] not found, trying link7", base_link.c_str(), tip_link.c_str());
+    const std::string fallback = "openarm_" + arm_prefix_ + "link7";
+    if (!kdl_tree.getChain(base_link, fallback, kdl_chain_)) {
+      RCLCPP_ERROR(rclcpp::get_logger("OpenArm_v10HW_GC"),
+        "Chain [%s -> %s] also failed — KDL disabled", base_link.c_str(), fallback.c_str());
       return true;
     }
-    RCLCPP_WARN(rclcpp::get_logger("OpenArm_v10HW_GC"),
-                "Using arm-only chain — H8 mass not included in gravity comp");
   }
 
   if (kdl_chain_.getNrOfJoints() != ARM_DOF) {
-    RCLCPP_ERROR(
-      rclcpp::get_logger("OpenArm_v10HW_GC"),
-      "KDL chain has %u joints, expected %zu — gravity compensation disabled",
-      kdl_chain_.getNrOfJoints(), ARM_DOF);
+    RCLCPP_ERROR(rclcpp::get_logger("OpenArm_v10HW_GC"),
+      "Chain has %u joints, expected %zu — KDL disabled", kdl_chain_.getNrOfJoints(), ARM_DOF);
     return true;
   }
 
-  // Gravity in link0's local frame (NOT world frame).
-  // The arm is tilted 90° on mount: link0's Y-axis = world UP.
-  //   right arm (rpy= π/2, 0, π): gravity = (0, -9.81, 0)
-  //   left  arm (rpy=-π/2, 0, π): gravity = (0, +9.81, 0)
+  // Gravity in link0's local frame — arm Y-axis is vertical due to 90deg mount tilt.
+  // right (rpy=+90,0,180): arm_Y → world UP   → gravity = (0, -9.81, 0)
+  // left  (rpy=-90,0,180): arm_Y → world DOWN  → gravity = (0, +9.81, 0)
   const KDL::Vector gravity = (arm_prefix_ == "left_")
       ? KDL::Vector(0.0, 9.81, 0.0)
       : KDL::Vector(0.0, -9.81, 0.0);
-  kdl_dyn_param_ = std::make_unique<KDL::ChainDynParam>(kdl_chain_, gravity);
 
+  kdl_dyn_param_ = std::make_unique<KDL::ChainDynParam>(kdl_chain_, gravity);
   gravity_comp_ready_ = true;
 
-  RCLCPP_INFO(
-    rclcpp::get_logger("OpenArm_v10HW_GC"),
-    "Gravity compensation ready: chain [%s -> %s], scale=%.2f",
-    base_link.c_str(), tip_link.c_str(), gravity_comp_scale_);
+  RCLCPP_INFO(rclcpp::get_logger("OpenArm_v10HW_GC"),
+    "[%s] KDL ready: chain [%s -> %s]  scale=%.2f  gravity=(0, %.2f, 0)",
+    arm_prefix_.c_str(), base_link.c_str(), tip_link.c_str(),
+    gravity_comp_scale_, gravity.y());
 
   return true;
 }
@@ -289,37 +271,28 @@ hardware_interface::return_type OpenArm_v10HW_GC::write(
     }
   }
 
-  // Always send when gravity comp is active so tau_gravity stays current
-  // as the arm moves (gravity torque changes continuously with pose)
   if (!command_received_ && !gravity_comp_ready_) {
     return hardware_interface::return_type::OK;
   }
 
   last_pos_commands_ = pos_commands_;
 
-  // Compute gravity torques from actual joint positions
+  // Compute gravity torques (always, so they can be logged even at scale=0)
   KDL::JntArray grav_torques(ARM_DOF);
   if (gravity_comp_ready_) {
     KDL::JntArray q(ARM_DOF);
-    for (size_t i = 0; i < ARM_DOF; ++i) {
-      q(i) = pos_states_[i];
-    }
+    for (size_t i = 0; i < ARM_DOF; ++i) q(i) = pos_states_[i];
     kdl_dyn_param_->JntToGravity(q, grav_torques);
 
-    // Debug: log every 100 cycles (~1s) so you can monitor without flooding
-    static int log_counter = 0;
-    if (++log_counter >= 100) {
-      log_counter = 0;
+    static int log_cnt = 0;
+    if (++log_cnt >= 100) {
+      log_cnt = 0;
       RCLCPP_INFO(rclcpp::get_logger("OpenArm_v10HW_GC"),
-        "[%s] grav_torques(Nm): %s=%.2f %s=%.2f %s=%.2f %s=%.2f %s=%.2f %s=%.2f %s=%.2f",
+        "[%s] grav(Nm) J1=%.2f J2=%.2f J3=%.2f J4=%.2f J5=%.2f J6=%.2f J7=%.2f  scale=%.2f",
         arm_prefix_.c_str(),
-        joint_names_[0].c_str(), grav_torques(0),
-        joint_names_[1].c_str(), grav_torques(1),
-        joint_names_[2].c_str(), grav_torques(2),
-        joint_names_[3].c_str(), grav_torques(3),
-        joint_names_[4].c_str(), grav_torques(4),
-        joint_names_[5].c_str(), grav_torques(5),
-        joint_names_[6].c_str(), grav_torques(6));
+        grav_torques(0), grav_torques(1), grav_torques(2), grav_torques(3),
+        grav_torques(4), grav_torques(5), grav_torques(6),
+        gravity_comp_scale_);
     }
   }
 
