@@ -18,7 +18,7 @@
 <package format="3">
   <name>openarm_hardware</name>
   <version>0.3.0</version>
-  <description>Hardware interface for  OpenArm</description>
+  <description>Hardware interface for OpenArm</description>
   <maintainer email="openarm_dev@enactic.ai">Enactic, Inc.</maintainer>
   <license>Apache-2.0</license>
 
@@ -28,6 +28,8 @@
   <depend>hardware_interface</depend>
   <depend>openarm_can</depend>
   <depend>pluginlib</depend>
+  <depend>orocos_kdl</depend>
+  <depend>kdl_parser</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

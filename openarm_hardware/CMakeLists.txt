@@ -29,18 +29,25 @@ find_package(rclcpp_lifecycle REQUIRED)
 # Find openarm_can library
 find_package(OpenArmCAN REQUIRED)
 
+# KDL for gravity compensation
+find_package(orocos_kdl REQUIRED)
+find_package(kdl_parser REQUIRED)
+
 add_library(${PROJECT_NAME} SHARED
   src/v10_simple_hardware.cpp
+  src/v10_grav_comp_hardware.cpp
 )
 
 target_include_directories(
   ${PROJECT_NAME}
   PRIVATE
   include
+  ${orocos_kdl_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME}
   OpenArmCAN::openarm_can
+  ${orocos_kdl_LIBRARIES}
 )
 
 ament_target_dependencies(${PROJECT_NAME}
@@ -48,6 +55,8 @@ ament_target_dependencies(${PROJECT_NAME}
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  orocos_kdl
+  kdl_parser
 )
 
 pluginlib_export_plugin_description_file(hardware_interface openarm_hardware.xml)
@@ -73,6 +82,8 @@ ament_export_dependencies(
   openarm_can
   pluginlib
   rclcpp
+  orocos_kdl
+  kdl_parser
 )
 
 ament_package()
