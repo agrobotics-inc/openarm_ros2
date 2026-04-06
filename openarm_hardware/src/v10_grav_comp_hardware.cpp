@@ -299,6 +299,22 @@ hardware_interface::return_type OpenArm_v10HW_GC::write(
       q(i) = pos_states_[i];
     }
     kdl_dyn_param_->JntToGravity(q, grav_torques);
+
+    // Debug: log every 100 cycles (~1s) so you can monitor without flooding
+    static int log_counter = 0;
+    if (++log_counter >= 100) {
+      log_counter = 0;
+      RCLCPP_INFO(rclcpp::get_logger("OpenArm_v10HW_GC"),
+        "[%s] grav_torques(Nm): %s=%.2f %s=%.2f %s=%.2f %s=%.2f %s=%.2f %s=%.2f %s=%.2f",
+        arm_prefix_.c_str(),
+        joint_names_[0].c_str(), grav_torques(0),
+        joint_names_[1].c_str(), grav_torques(1),
+        joint_names_[2].c_str(), grav_torques(2),
+        joint_names_[3].c_str(), grav_torques(3),
+        joint_names_[4].c_str(), grav_torques(4),
+        joint_names_[5].c_str(), grav_torques(5),
+        joint_names_[6].c_str(), grav_torques(6));
+    }
   }
 
   std::vector<openarm::damiao_motor::MITParam> arm_params;
