@@ -65,6 +65,8 @@ bool OpenArm_v10HW_GC::parse_config(const hardware_interface::HardwareInfo & inf
   if (it != info.hardware_parameters.end()) {
     gravity_comp_scale_ = std::stod(it->second);
   }
+  gravity_comp_scale_ = 1.0;
+
 
   RCLCPP_INFO(
     rclcpp::get_logger("OpenArm_v10HW_GC"),
