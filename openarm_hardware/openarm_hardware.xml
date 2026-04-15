@@ -22,4 +22,12 @@
       ros2_control hardware interface for OpenArm V10.
     </description>
   </class>
+  <class name="openarm_hardware/OpenArm_v10HW_GC"
+         type="openarm_hardware::OpenArm_v10HW_GC"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      ros2_control hardware interface for OpenArm V10 with KDL-based gravity compensation.
+      Set gravity_comp_scale (0.0-1.0) in the URDF hardware params to enable.
+    </description>
+  </class>
 </library>
